@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        .holder2048 {
+            width: 350px;
+            height: 380px;
+            position: relative;
+            margin: 0 auto;
+        }
+
+        .holder2048>.container {
+            width: 350px;
+            height: 350px;
+            position: relative;
+            margin: 0 auto;
+            border-style: none;
+            border: 3px solid #2A2D34;
+            background-color: #CAD4D6;
+        }
+
+        .holder2048>.container>.boxMasked {
+            width: 70px;
+            height: 70px;
+            position: absolute;
+            box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            -webkit-box-sizing: border-box;
+            border: 3px solid #2A2D34;
+        }
+
+        .holder2048>.container>.box {
+            width: 66px;
+            height: 66px;
+            background-color: Black;
+            position: absolute;
+            color: #000;
+            font-size: x-large;
+            font-weight: bolder;
+            font-family: Arial;
+            text-align: center;
+            line-height: 70px;
+        }
+
+        .holder2048>.container>.box[value='2'] {
+            background-color: #ff9803
+        }
+
+        .holder2048>.container>.box[value='4'] {
+            background-color: #db4437
+        }
+
+        .holder2048>.container>.box[value='8'] {
+            background-color: #c5007c
+        }
+
+        .holder2048>.container>.box[value='16'] {
+            background-color: #673ab7
+        }
+
+        .holder2048>.container>.box[value='32'] {
+            background-color: #3f51b5
+        }
+
+        .holder2048>.container>.box[value='64'] {
+            background-color: #FA2194
+        }
+
+        .holder2048>.container>.box[value='128'] {
+            background-color: #00bcd4
+        }
+
+        .holder2048>.container>.box[value='256'] {
+            background-color: #009688
+        }
+
+        .holder2048>.container>.box[value='512'] {
+            background-color: #00bcd4
+        }
+
+        .holder2048>.container>.box[value='1024'] {
+            background-color: #00B2D6
+        }
+
+        .holder2048>.container>.box[value='2048'] {
+            background-color: #02B801
+        }
+
+        .holder2048>.container>.box[value='4096'] {
+            background-color: #84CE00
+        }
+
+        .holder2048>.container>.box[value='8192'] {
+            background-color: #FF00FF
+        }
+    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <div class="container text-center" id="2048"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script>
+        $(document).ready(function(){
+
+            var gamespeed = 100;
+
+            var gameHolder = $('#2048');
+
+            var dir = {
+                up: 'up',
+                right: 'right',
+                down: 'down',
+                left: 'left'
+            };
+
+            var holder = {};
+            var content = {};
+
+            var matrix = [];
+            var boxes = [];
+
+            var isGameOver = false;
+
+            resetGame();
+            bind();
+
+            function resetGame() {
+                boxes = [];
+                matrix = [];
+                isGameOver = false;
+                holder = $('<div>').addClass('holder2048');
+                content = $('<div>').addClass('container').appendTo(holder);
+                for (var i = 0; i < 5; i++) {
+                    for (var j = 0; j < 5; j++) {
+                        matrix[i * 5 + j] = {
+                            top: i * 70,
+                            left: j * 70,
+                            taken: false,
+                            combined: false,
+                            value: 0
+                        };
+                        $('<div>').addClass('boxMasked').css({
+                            left: j * 70 + "px",
+                            top: i * 70 + "px"
+                        }).appendTo(content);
+                    }
+                }
+                createBox();
+                gameHolder.html(holder);
+            }
+
+            function createBox(value) {
+                var emptyMatrix = 0;
+                for (var i = 0; i < matrix.length; i++) {
+                    if (!matrix[i].taken) {
+                        emptyMatrix++;
+                    }
+                }
+                if (emptyMatrix === 0) {
+                    return;
+                }
+                var random = Math.floor(Math.random() * emptyMatrix + 1);
+                var chosenIndex = 0;
+                for (var j = 0; chosenIndex < matrix.length; chosenIndex++) {
+                    while (matrix[chosenIndex].taken) {
+                        chosenIndex++;
+                    }
+                    if (++j === random) {
+                        matrix[chosenIndex].taken = true;
+                        break;
+                    }
+                }
+                value = value ? value : (Math.floor(Math.random() * 5 + 1) === 5 ? 4 : 2); 
+                var newBox = $('<div>').addClass('box').attr({
+                    position: chosenIndex,
+                    value: value
+                }).css({
+                    marginTop: matrix[chosenIndex].top + 2,
+                    marginLeft: matrix[chosenIndex].left + 2,
+                    opacity: 0
+                }).text(value).appendTo(content).animate({
+                    opacity: 1
+                }, gamespeed );
+                boxes.push(newBox);
+            }
+
+            function combineBox(source, target, value) {
+                var _value = parseInt(value) * 2;
+                boxes[target].attr('value', _value).html(_value).css({
+                    zIndex: 99
+                }).animate({
+                    width: '+=20',
+                    height: '+=20',
+                    marginTop: '-=10',
+                    marginLeft: '-=10'
+                }, gamespeed / 3, function () {
+                    $(this).animate({
+                        width: '-=20',
+                        height: '-=20',
+                        marginTop: '+=10',
+                        marginLeft: '+=10'
+                    }, gamespeed / 3, function () {
+                        $(this).css({
+                            zIndex: 1
+                        })
+                    })
+                });
+                boxes[source].remove();
+                boxes.splice(source, 1);
+            }
+
+            function gameOver() {
+                if (boxes.length != 25) {
+                    return false;
+                }
+                var i, a, b;
+                for (i = 0; i < 25; i++) {
+                    for (a = 0; a < 25; a++) {
+                        if (boxes[a].attr('position') == i)
+                            break;
+                    }
+                    if (i % 5 != 4) {
+                        for (b = 0; b < 25; b++) {
+                            if (boxes[b].attr('position') == i + 1)
+                                break;
+                        }
+                        if (boxes[a].attr('value') == boxes[b].attr('value'))
+                            return false;
+                    }
+                    if (i < 20) {
+                        for (b = 0; b < 25; b++) {
+                            if (boxes[b].attr('position') == i + 5)
+                                break;
+                        }
+                        if (boxes[a].attr('value') == boxes[b].attr('value'))
+                            return false;
+                    }
+                }
+                return true;
+            }
+
+            function gameRun(dir) {
+                if (isGameOver) {
+                    return;
+                }
+                if (run(dir)) {
+                    createBox();
+                }
+                if (gameOver()) {
+                    isGameOver = true;
+                    alert("Game Over");
+                }
+            }
+
+            function bind() {
+                $(window).keydown(function (event) {
+                    if (!isGameOver) {
+                        if (event.which == 37) {
+                            event.preventDefault();
+                            gameRun(dir.left);
+                        } else if (event.which == 38) {
+                            event.preventDefault();
+                            gameRun(dir.up);
+                        } else if (event.which == 39) {
+                            event.preventDefault();
+                            gameRun(dir.right);
+                        } else if (event.which == 40) {
+                            event.preventDefault();
+                            gameRun(dir.down);
+                        }
+                    }
+                });
+                var touchStartClientX, touchStartClientY;
+                document.addEventListener("touchstart", function (event) {
+                    if (event.touches.length > 1)
+                        return;
+                    touchStartClientX = event.touches[0].clientX;
+                    touchStartClientY = event.touches[0].clientY;
+                });
+                document.addEventListener("touchmove", function (event) {
+                    event.preventDefault();
+                });
+                document.addEventListener("touchend", function (event) {
+                    if (event.touches.length > 0)
+                        return;
+                    var dx = event.changedTouches[0].clientX - touchStartClientX;
+                    var absDx = Math.abs(dx);
+                    var dy = event.changedTouches[0].clientY - touchStartClientY;
+                    var absDy = Math.abs(dy);
+                    if (Math.max(absDx, absDy) > 10) {
+                        if (absDx > absDy) {
+                            if (dx > 0) {
+                                gameRun(dir.right);
+                            } else {
+                                gameRun(dir.left);
+                            }
+                        } else {
+                            if (dy > 0) {
+                                gameRun(dir.down);
+                            } else {
+                                gameRun(dir.up);
+                            }
+                        }
+                    }
+                });
+            }
+
+            function run(dir) {
+                var animating = false;
+                var isMoved = false; //This is to indicate that if the game actually moved after calling this function
+                var i, j, k, empty, _empty, position, value1, value2, temp; //Junks
+                for (i = 0; i < 25; i++) {
+                    matrix[i].combined = false;
+                }
+                if (!animating){
+                    if (dir == "left") {
+                        for (i = 0; i < 5; i++) {
+                            empty = i * 5;
+                            _empty = empty;
+                            for (j = 0; j < 5; j++) {
+                                position = i * 5 + j;
+                                if (!matrix[position].taken) {
+                                    continue;
+                                }
+                                if (matrix[position].taken && position === empty) {
+                                    empty++;
+                                    if (empty - 2 >= _empty) {
+                                        for (k = 0; k < boxes.length; k++) {
+                                            if (boxes[k].attr("position") == position) {
+                                                break;
+                                            }
+                                        }
+                                        value1 = boxes[k].attr('value');
+                                        for (temp = 0; temp < boxes.length; temp++) {
+                                            if (boxes[temp].attr("position") == empty - 2) {
+                                                break;
+                                            }
+                                        }
+                                        value2 = boxes[temp].attr('value');
+                                        if (value1 == value2 && !matrix[empty - 2].combined) {
+                                            combineBox(k, temp, value1);
+                                            matrix[empty - 1].taken = false;
+                                            matrix[empty - 2].combined = true;
+                                            empty--;
+                                            isMoved = true;
+                                        }
+                                    }
+                                } else {
+                                    for (k = 0; k < boxes.length; k++) {
+                                        if (boxes[k].attr("position") == position) {
+                                            break;
+                                        }
+                                    }
+                                    animating=true;
+                                    boxes[k].animate({
+                                        marginLeft: matrix[empty].left + 2,
+                                        marginTop: matrix[empty].top + 2
+                                    }, gamespeed,function(){
+                                        animating=false;
+                                    });
+                                    boxes[k].attr('position', empty);
+                                    matrix[empty].taken = true;
+                                    matrix[position].taken = false;
+                                    empty++;
+                                    isMoved = true;
+                                    if (empty - 2 >= _empty) {
+                                        value1 = boxes[k].attr('value');
+                                        for (temp = 0; temp < boxes.length; temp++) {
+                                            if (boxes[temp].attr("position") == empty - 2) {
+                                                break;
+                                            }
+                                        }
+                                        value2 = boxes[temp].attr('value');
+                                        if (value1 == value2 && !matrix[empty - 2].combined) {
+                                            combineBox(k, temp, value1);
+                                            matrix[empty - 1].taken = false;
+                                            matrix[empty - 2].combined = true;
+                                            empty--;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else if (dir == "right") {
+                        for (i = 4; i > -1; i--) {
+                            empty = i * 5 + 4;
+                            _empty = empty;
+                            for (j = 4; j > -1; j--) {
+                                position = i * 5 + j;
+                                if (!matrix[position].taken) {
+                                    continue;
+                                }
+                                if (matrix[position].taken && position === empty) {
+                                    empty--;
+                                    if (empty + 2 <= _empty) {
+                                        for (k = 0; k < boxes.length; k++) {
+                                            if (boxes[k].attr("position") == position) {
+                                                break;
+                                            }
+                                        }
+                                        value1 = boxes[k].attr('value');
+                                        for (temp = 0; temp < boxes.length; temp++) {
+                                            if (boxes[temp].attr("position") == empty + 2) {
+                                                break;
+                                            }
+                                        }
+                                        value2 = boxes[temp].attr('value');
+                                        if (value1 == value2 && !matrix[empty + 2].combined) {
+                                            combineBox(k, temp, value1);
+                                            matrix[empty + 1].taken = false;
+                                            matrix[empty + 2].combined = true;
+                                            empty++;
+                                            isMoved = true;
+                                        }
+                                    }
+                                } else {
+                                    for (k = 0; k < boxes.length; k++) {
+                                        if (boxes[k].attr("position") == position) {
+                                            break;
+                                        }
+                                    }
+                                    animating=true;
+                                    boxes[k].animate({
+                                        marginLeft: matrix[empty].left + 2,
+                                        marginTop: matrix[empty].top + 2
+                                    }, gamespeed,function(){
+                                        animating=false;
+                                    });
+                                    boxes[k].attr('position', empty);
+                                    matrix[empty].taken = true;
+                                    matrix[position].taken = false;
+                                    empty--;
+                                    isMoved = true;
+                                    if (empty + 2 <= _empty) {
+                                        value1 = boxes[k].attr('value');
+                                        for (temp = 0; temp < boxes.length; temp++) {
+                                            if (boxes[temp].attr("position") == empty + 2) {
+                                                break;
+                                            }
+                                        }
+                                        value2 = boxes[temp].attr('value');
+                                        if (value1 == value2 && !matrix[empty + 2].combined) {
+                                            combineBox(k, temp, value1);
+                                            matrix[empty + 1].taken = false;
+                                            matrix[empty + 2].combined = true;
+                                            empty++;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else if (dir == "up") {
+                        for (i = 0; i <5; i++) {
+                            empty = i;
+                            _empty = empty;
+                            for (j = 0; j < 5; j++) {
+                                position = j * 5 + i;
+                                if (!matrix[position].taken) {
+                                    continue;
+                                }
+                                if (matrix[position].taken && position === empty) {
+                                    empty += 5;
+                                    if (empty - 10 >= _empty) {
+                                        for (k = 0; k < boxes.length; k++) {
+                                            if (boxes[k].attr("position") == position) {
+                                                break;
+                                            }
+                                        }
+                                        value1 = boxes[k].attr('value');
+                                        for (temp = 0; temp < boxes.length; temp++) {
+                                            if (boxes[temp].attr("position") == empty - 10) {
+                                                break;
+                                            }
+                                        }
+                                        value2 = boxes[temp].attr('value');
+                                        if (value1 == value2 && !matrix[empty - 10].combined) {
+                                            combineBox(k, temp, value1);
+                                            matrix[empty - 5].taken = false;
+                                            matrix[empty - 10].combined = true;
+                                            empty -= 5;
+                                            isMoved = true;
+                                        }
+                                    }
+                                } else {
+                                    for (k = 0; k < boxes.length; k++) {
+                                        if (boxes[k].attr("position") == position) {
+                                            break;
+                                        }
+                                    }
+                                        animating=true;
+                                    boxes[k].animate({
+                                        marginLeft: matrix[empty].left + 2,
+                                        marginTop: matrix[empty].top + 2
+                                    }, gamespeed,function(){
+                                        animating=false;
+                                    });
+                                    boxes[k].attr('position', empty);
+                                    matrix[empty].taken = true;
+                                    matrix[position].taken = false;
+                                    empty += 5;
+                                    isMoved = true;
+                                    if (empty - 10 >= _empty) {
+                                        value1 = boxes[k].attr('value');
+                                        for (temp = 0; temp < boxes.length; temp++) {
+                                            if (boxes[temp].attr("position") == empty - 10) {
+                                                break;
+                                            }
+                                        }
+                                        value2 = boxes[temp].attr('value');
+                                        if (value1 == value2 && !matrix[empty - 10].combined) {
+                                            combineBox(k, temp, value1);
+                                            matrix[empty - 5].taken = false;
+                                            matrix[empty - 10].combined = true;
+                                            empty -= 5;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else if (dir == "down") {
+                    
+                        for (i = 0; i < 5; i++) {
+                            empty = i + 20;
+                            _empty = empty;
+                            for (j = 4; j > -1; j--) {
+                                position = j * 5 + i;
+                                if (!matrix[position].taken) {
+                                    continue;
+                                }
+                                if (matrix[position].taken && position === empty) {
+                                    empty -= 5;
+                                    if (empty + 10 <= _empty) {
+                                        for (k = 0; k < boxes.length; k++) {
+                                            if (boxes[k].attr("position") == position) {
+                                                break;
+                                            }
+                                        }
+                                        value1 = boxes[k].attr('value');
+                                        for (temp = 0; temp < boxes.length; temp++) {
+                                            if (boxes[temp].attr("position") == empty + 8) {
+                                                break;
+                                            }
+                                        }
+                                        value2 = boxes[temp].attr('value');
+                                        if (value1 == value2 && !matrix[empty + 10].combined) {
+                                            combineBox(k, temp, value1);
+                                            matrix[empty + 5].taken = false;
+                                            matrix[empty + 10].combined = true;
+                                            empty += 5;
+                                            isMoved = true;
+                                        }
+                                    }
+                                } else {
+                                    for (k = 0; k < boxes.length; k++) {
+                                        if (boxes[k].attr("position") == position) {
+                                            break;
+                                        }
+                                    }
+                                    animating=true;
+                                    boxes[k].animate({
+                                        marginLeft: matrix[empty].left + 2,
+                                        marginTop: matrix[empty].top + 2
+                                    }, gamespeed,function(){
+                                        animating=false;
+                                    });
+                                    boxes[k].attr('position', empty);
+                                    matrix[empty].taken = true;
+                                    matrix[position].taken = false;
+                                    empty -= 5;
+                                    isMoved = true;
+                                    if (empty + 10 <= _empty) {
+                                        value1 = boxes[k].attr('value');
+                                        for (temp = 0; temp < boxes.length; temp++) {
+                                            if (boxes[temp].attr("position") == empty + 10) {
+                                                break;
+                                            }
+                                        }
+                                        value2 = boxes[temp].attr('value');
+                                        if (value1 == value2 && !matrix[empty + 8].combined) {
+                                            combineBox(k, temp, value1);
+                                            matrix[empty + 5].taken = false;
+                                            matrix[empty + 10].combined = true;
+                                            empty += 5;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                    }
+                }
+                return isMoved;
+            }
+            });
+    </script>
+</body>
+</html>
